@@ -56,7 +56,7 @@ Doesnt work:
 
 def evaluate_lenet5(learning_rate=0.09, n_epochs=2000, nkerns=[50,50], batch_size=1, window_width=3,
                     maxSentLength=64, maxDocLength=60, emb_size=300, hidden_size=200,
-                    margin=0.5, L2_weight=0.00065, update_freq=1, norm_threshold=5.0, max_s_length=57, max_d_length=59):
+                    L2_weight=0.00065, update_freq=1, norm_threshold=5.0, max_s_length=57, max_d_length=59, margin=0.3):
     maxSentLength=max_s_length+2*(window_width-1)
     maxDocLength=max_d_length+2*(window_width-1)
     model_options = locals().copy()
@@ -327,6 +327,10 @@ def evaluate_lenet5(learning_rate=0.09, n_epochs=2000, nkerns=[50,50], batch_siz
     simi_overall_level2=debug_print(cosine(overall_D_Q+overall_D_A2, overall_Q+overall_A2), 'simi_overall_level2')
     simi_overall_level3=debug_print(cosine(overall_D_Q+overall_D_A3, overall_Q+overall_A3), 'simi_overall_level3')
     simi_overall_level4=debug_print(cosine(overall_D_Q+overall_D_A4, overall_Q+overall_A4), 'simi_overall_level4')
+#     simi_overall_level1=debug_print(1.0/(1.0+EUCLID(overall_D_Q+overall_D_A1, overall_Q+overall_A1)), 'simi_overall_level1')
+#     simi_overall_level2=debug_print(1.0/(1.0+EUCLID(overall_D_Q+overall_D_A2, overall_Q+overall_A2)), 'simi_overall_level2')
+#     simi_overall_level3=debug_print(1.0/(1.0+EUCLID(overall_D_Q+overall_D_A3, overall_Q+overall_A3)), 'simi_overall_level3')
+#     simi_overall_level4=debug_print(1.0/(1.0+EUCLID(overall_D_Q+overall_D_A4, overall_Q+overall_A4)), 'simi_overall_level4')
     
 
 #     eucli_1=1.0/(1.0+EUCLID(layer3_DQ.output_D+layer3_DA.output_D, layer3_DQ.output_QA+layer3_DA.output_QA))
@@ -347,7 +351,7 @@ def evaluate_lenet5(learning_rate=0.09, n_epochs=2000, nkerns=[50,50], batch_siz
     #L2_reg =(layer3.W** 2).sum()+(layer2.W** 2).sum()+(layer1.W** 2).sum()+(conv_W** 2).sum()
     L2_reg =debug_print((high_W**2).sum()+(conv2_W**2).sum()+(conv_W**2).sum(), 'L2_reg')#+(layer1.W** 2).sum()++(embeddings**2).sum()
     
-    cost=T.maximum(0.0, 0.3+T.max([simi_overall_level2, simi_overall_level3, simi_overall_level4])-simi_overall_level1) # ranking loss: max(0, margin-nega+posi)
+    cost=T.maximum(0.0, margin+T.max([simi_overall_level2, simi_overall_level3, simi_overall_level4])-simi_overall_level1) # ranking loss: max(0, margin-nega+posi)
     cost=debug_print(cost+L2_weight*L2_reg, 'cost')
     #cost=debug_print((cost_this+cost_tmp)/update_freq, 'cost')
     
@@ -567,9 +571,9 @@ def evaluate_lenet5(learning_rate=0.09, n_epochs=2000, nkerns=[50,50], batch_siz
                     best_epoch=epoch    
                     find_better=True             
                 print '\t\t\ttest_acc:', test_acc, 'max:',    max_acc,'(at',best_epoch,')'
-#                 if find_better==True:
-#                     store_model_to_file(layer2_para, best_epoch)
-#                     print 'Finished storing best conv params'  
+                if find_better==True:
+                    store_model_to_file(params, best_epoch, max_acc)
+                    print 'Finished storing best params'  
 
             if patience <= iter:
                 done_looping = True
@@ -591,8 +595,8 @@ def evaluate_lenet5(learning_rate=0.09, n_epochs=2000, nkerns=[50,50], batch_siz
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
 
 
-def store_model_to_file(best_params, best_epoch):
-    save_file = open('/mounts/data/proj/wenpeng/Dataset/SICK/Best_Conv2_Para_'+str(best_epoch), 'wb')  # this will overwrite current contents
+def store_model_to_file(best_params, best_epoch, best_acc):
+    save_file = open('/mounts/data/proj/wenpeng/Dataset/MCTest/Best_Para_at'+str(best_epoch)+'_'+str(best_acc), 'wb')  # this will overwrite current contents
     for para in best_params:           
         cPickle.dump(para.get_value(borrow=True), save_file, -1)  # the -1 is for HIGHEST_PROTOCOL
     save_file.close()
@@ -624,7 +628,7 @@ def GESD (sum_uni_l, sum_uni_r):
     kernel=1/(1+T.exp(-(T.dot(sum_uni_l,sum_uni_r.T)+1)))
     return (eucli*kernel).reshape((1,1))   
 def EUCLID(sum_uni_l, sum_uni_r):
-    return T.sqrt(T.sqr(sum_uni_l-sum_uni_r).sum()+1e-20).reshape((1,1))
+    return T.sqrt(T.sqr(sum_uni_l-sum_uni_r).sum()+1e-20)#.reshape((1,1))
 def load_model_for_conv1(params):
     #save_file = open('/mounts/data/proj/wenpeng/Dataset/WikiQACorpus/Best_Conv_Para')
     #save_file = open('/mounts/data/proj/wenpeng/Dataset/WikiQACorpus/Best_Conv_Para_at_18')
