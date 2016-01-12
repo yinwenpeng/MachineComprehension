@@ -666,7 +666,7 @@ def load_MCTest_corpus(vocabFile, trainFile, testFile, max_truncate,maxlength, m
 
     return train_list, train_size, test_list, test_size, word_ind-1
 
-def load_MCTest_corpus_new(vocabFile, trainFile, testFile, max_truncate,maxlength, max_doc_length): #maxSentLength=45
+def load_MCTest_corpus_DQAAAA(vocabFile, trainFile, testFile, max_truncate,maxlength, max_doc_length): #maxSentLength=45
     #first load word vocab
     read_vocab=open(vocabFile, 'r')
     vocab={}
@@ -856,9 +856,9 @@ def load_MCTest_corpus_new(vocabFile, trainFile, testFile, max_truncate,maxlengt
 
 
     train_data, train_size=load_file(trainFile, vocab)
-    print 'train file loaded over'
+    print 'train file loaded over, train size:', train_size
     test_data, test_size=load_file(testFile, vocab)
-    print 'test file loaded over'
+    print 'test file loaded over, test_size:', test_size
 
 
     
@@ -874,3 +874,422 @@ def load_MCTest_corpus_new(vocabFile, trainFile, testFile, max_truncate,maxlengt
 
     return train_list, train_size, test_list, test_size, word_ind-1
 
+def load_MCTest_corpus_DSSSS(vocabFile, trainFile, testFile, max_truncate,maxlength, max_doc_length): #maxSentLength=45
+    #first load word vocab
+    read_vocab=open(vocabFile, 'r')
+    vocab={}
+    word_ind=1
+    for line in read_vocab:
+        tokens=line.strip().split()
+        vocab[tokens[1]]=word_ind #word2id
+        word_ind+=1
+    read_vocab.close()
+    #load train file
+    def load_file(infile, word2id):   
+        read_file=open(infile, 'r')
+        data_D=[] #docs, will be a order-3 tensor
+#         data_Q=[] #question
+        data_A1=[] #positive answers
+        data_A2=[]
+        data_A3=[]
+        data_A4=[]
+#         Y=[]
+        Label=[]
+        Length_D=[] #true lengths of docs
+        Length_D_s=[] # true lengths of each sentences in docs
+#         Length_Q=[]
+        Length_A1=[]
+        Length_A2=[]
+        Length_A3=[]
+        Length_A4=[]
+        leftPad_D=[]
+        leftPad_D_s=[]
+#         leftPad_Q=[]
+        leftPad_A1=[]
+        leftPad_A2=[]
+        leftPad_A3=[]
+        leftPad_A4=[]
+        rightPad_D=[]
+        rightPad_D_s=[]
+#         rightPad_Q=[]
+        rightPad_A1=[]       
+        rightPad_A2=[]  
+        rightPad_A3=[]  
+        rightPad_A4=[]                           
+
+        line_control=0
+        for line in read_file:
+            tokens=line.strip().split('\t')  # question, answer, label
+#             Y.append(int(tokens[0]))
+            Label.append(int(tokens[0])) #1 or 2 means single or multiple
+
+            #doc
+            data_D_s=[]# will be a matrix
+            length_D_s=[]#a vector
+            left_D_s=[] # vector
+            right_D_s=[] #vector
+            
+            doc_len=len(tokens)-5 # remove one label, four statements           
+            left_D=(max_doc_length-doc_len)/2
+            for i in range(left_D):#pad empty sentences
+                sent=[0]*maxlength
+                #update four depository
+                data_D_s.append(sent)
+                length_D_s.append(0)
+                left_D_s.append(maxlength/2)
+                right_D_s.append(maxlength-maxlength/2)
+
+
+            for s in tokens[1:-4]: #load valid sentences
+                sent=[]
+                words=s.strip().split()  
+                for word in words:
+                    id=word2id.get(word)
+                    if id is not None:
+                        sent.append(id)
+                length=len(words)
+                left=(maxlength-length)/2
+                right=maxlength-left-length
+                sent=[0]*left+sent+[0]*right
+                #update four depository
+                data_D_s.append(sent)
+                length_D_s.append(length)
+                left_D_s.append(left)
+                right_D_s.append(right)
+            
+            right_D=max_doc_length-left_D-doc_len
+            for i in range(right_D):#pad empty sentences
+                sent=[0]*maxlength
+                #update four depository
+                data_D_s.append(sent)
+                length_D_s.append(0)
+                left_D_s.append(maxlength/2)
+                right_D_s.append(maxlength-maxlength/2)            
+
+            data_D.append(data_D_s) # add one slice
+            Length_D.append(doc_len)
+            leftPad_D.append(left_D)
+            rightPad_D.append(right_D)                        
+            #store above four depository
+            Length_D_s.append(length_D_s)
+            leftPad_D_s.append(left_D_s)
+            rightPad_D_s.append(right_D_s)
+#             #Q
+#             words=tokens[-5].strip().split()
+#             len_q=len(words)
+#             left=(maxlength-len_q)/2
+#             right=maxlength-left-len_q          
+#             sent=[]
+#             for word in words:
+#                 id=word2id.get(word)
+#                 if id is not None:
+#                     sent.append(id)
+#             sent=[0]*left+sent+[0]*right
+#             data_Q.append(sent)
+#             Length_Q.append(len_q)
+#             leftPad_Q.append(left)
+#             rightPad_Q.append(right)             
+            #A1
+            words=tokens[-4].strip().split()
+            len_a=len(words)
+            left=(maxlength-len_a)/2
+            right=maxlength-left-len_a           
+            sent=[]
+            for word in words:
+                id=word2id.get(word)
+                if id is not None:
+                    sent.append(id)
+            sent=[0]*left+sent+[0]*right
+            data_A1.append(sent)            
+            Length_A1.append(len_a)
+            leftPad_A1.append(left)
+            rightPad_A1.append(right)         
+            #A2
+            words=tokens[-3].strip().split()
+            len_a=len(words)
+            left=(maxlength-len_a)/2
+            right=maxlength-left-len_a           
+            sent=[]
+            for word in words:
+                id=word2id.get(word)
+                if id is not None:
+                    sent.append(id)
+            sent=[0]*left+sent+[0]*right
+            data_A2.append(sent)            
+            Length_A2.append(len_a)
+            leftPad_A2.append(left)
+            rightPad_A2.append(right)   
+            #A1
+            words=tokens[-2].strip().split()
+            len_a=len(words)
+            left=(maxlength-len_a)/2
+            right=maxlength-left-len_a           
+            sent=[]
+            for word in words:
+                id=word2id.get(word)
+                if id is not None:
+                    sent.append(id)
+            sent=[0]*left+sent+[0]*right
+            data_A3.append(sent)            
+            Length_A3.append(len_a)
+            leftPad_A3.append(left)
+            rightPad_A3.append(right)   
+            #A1
+            words=tokens[-1].strip().split()
+            len_a=len(words)
+            left=(maxlength-len_a)/2
+            right=maxlength-left-len_a           
+            sent=[]
+            for word in words:
+                id=word2id.get(word)
+                if id is not None:
+                    sent.append(id)
+            sent=[0]*left+sent+[0]*right
+            data_A4.append(sent)            
+            Length_A4.append(len_a)
+            leftPad_A4.append(left)
+            rightPad_A4.append(right)       
+            line_control+=1
+            #if line_control==50:
+            #    break
+        read_file.close()
+ 
+        
+        results=[numpy.array(data_D), numpy.array(data_A1), numpy.array(data_A2), numpy.array(data_A3), numpy.array(data_A4), numpy.array(Label), 
+                 numpy.array(Length_D),numpy.array(Length_D_s), numpy.array(Length_A1), numpy.array(Length_A2), numpy.array(Length_A3), numpy.array(Length_A4),
+                numpy.array(leftPad_D),numpy.array(leftPad_D_s), numpy.array(leftPad_A1), numpy.array(leftPad_A2), numpy.array(leftPad_A3), numpy.array(leftPad_A4),
+                numpy.array(rightPad_D),numpy.array(rightPad_D_s), numpy.array(rightPad_A1), numpy.array(rightPad_A2), numpy.array(rightPad_A3), numpy.array(rightPad_A4)]
+        return results, line_control
+
+
+
+    train_data, train_size=load_file(trainFile, vocab)
+    print 'train file loaded over, train size:', train_size
+
+    test_data, test_size=load_file(testFile, vocab)
+    print 'test file loaded over, test_size:', test_size
+
+
+    
+    def shared_dataset(data_y, borrow=True):
+        shared_y = theano.shared(numpy.asarray(data_y,
+                                               dtype=theano.config.floatX),  # @UndefinedVariable
+                                 borrow=borrow)
+        return T.cast(shared_y, 'int64')  
+        #return shared_y
+    
+    train_list=[shared_dataset(matt) for matt in train_data]
+
+    test_list=[shared_dataset(matt) for matt in test_data]       
+
+    return train_list, train_size, test_list, test_size, word_ind-1
+
+def load_MCTest_corpus_DPN(vocabFile, trainFile, testFile, max_truncate,maxlength, max_doc_length): #maxSentLength=45
+    #first load word vocab
+    read_vocab=open(vocabFile, 'r')
+    vocab={}
+    word_ind=1
+    for line in read_vocab:
+        tokens=line.strip().split()
+        vocab[tokens[1]]=word_ind #word2id
+        word_ind+=1
+    read_vocab.close()
+    #load train file
+    def load_file(infile, word2id):   
+        read_file=open(infile, 'r')
+        data_D=[] #docs, will be a order-3 tensor
+#         data_Q=[] #question
+        data_A1=[] #positive answers
+        data_A2=[]
+#         data_A3=[]
+#         data_A4=[]
+#         Y=[]
+        Label=[]
+        Length_D=[] #true lengths of docs
+        Length_D_s=[] # true lengths of each sentences in docs
+#         Length_Q=[]
+        Length_A1=[]
+        Length_A2=[]
+#         Length_A3=[]
+#         Length_A4=[]
+        leftPad_D=[]
+        leftPad_D_s=[]
+#         leftPad_Q=[]
+        leftPad_A1=[]
+        leftPad_A2=[]
+#         leftPad_A3=[]
+#         leftPad_A4=[]
+        rightPad_D=[]
+        rightPad_D_s=[]
+#         rightPad_Q=[]
+        rightPad_A1=[]       
+        rightPad_A2=[]  
+#         rightPad_A3=[]  
+#         rightPad_A4=[]                           
+
+        line_control=0
+        for line in read_file:
+            tokens=line.strip().split('\t')  # question, answer, label
+#             Y.append(int(tokens[0]))
+            Label.append(int(tokens[0])) #1 or 2 means single or multiple
+
+            #doc
+            data_D_s=[]# will be a matrix
+            length_D_s=[]#a vector
+            left_D_s=[] # vector
+            right_D_s=[] #vector
+            
+            doc_len=len(tokens)-3 # remove one label, two statements           
+            left_D=(max_doc_length-doc_len)/2
+            for i in range(left_D):#pad empty sentences
+                sent=[0]*maxlength
+                #update four depository
+                data_D_s.append(sent)
+                length_D_s.append(0)
+                left_D_s.append(maxlength/2)
+                right_D_s.append(maxlength-maxlength/2)
+
+
+            for s in tokens[1:-2]: #load valid sentences
+                sent=[]
+                words=s.strip().split()  
+                for word in words:
+                    id=word2id.get(word)
+                    if id is not None:
+                        sent.append(id)
+                length=len(words)
+                left=(maxlength-length)/2
+                right=maxlength-left-length
+                sent=[0]*left+sent+[0]*right
+                #update four depository
+                data_D_s.append(sent)
+                length_D_s.append(length)
+                left_D_s.append(left)
+                right_D_s.append(right)
+            
+            right_D=max_doc_length-left_D-doc_len
+            for i in range(right_D):#pad empty sentences
+                sent=[0]*maxlength
+                #update four depository
+                data_D_s.append(sent)
+                length_D_s.append(0)
+                left_D_s.append(maxlength/2)
+                right_D_s.append(maxlength-maxlength/2)            
+
+            data_D.append(data_D_s) # add one slice
+            Length_D.append(doc_len)
+            leftPad_D.append(left_D)
+            rightPad_D.append(right_D)                        
+            #store above four depository
+            Length_D_s.append(length_D_s)
+            leftPad_D_s.append(left_D_s)
+            rightPad_D_s.append(right_D_s)
+#             #Q
+#             words=tokens[-5].strip().split()
+#             len_q=len(words)
+#             left=(maxlength-len_q)/2
+#             right=maxlength-left-len_q          
+#             sent=[]
+#             for word in words:
+#                 id=word2id.get(word)
+#                 if id is not None:
+#                     sent.append(id)
+#             sent=[0]*left+sent+[0]*right
+#             data_Q.append(sent)
+#             Length_Q.append(len_q)
+#             leftPad_Q.append(left)
+#             rightPad_Q.append(right)             
+            #A1
+            words=tokens[-2].strip().split()
+            len_a=len(words)
+            left=(maxlength-len_a)/2
+            right=maxlength-left-len_a           
+            sent=[]
+            for word in words:
+                id=word2id.get(word)
+                if id is not None:
+                    sent.append(id)
+            sent=[0]*left+sent+[0]*right
+            data_A1.append(sent)            
+            Length_A1.append(len_a)
+            leftPad_A1.append(left)
+            rightPad_A1.append(right)         
+            #A2
+            words=tokens[-1].strip().split()
+            len_a=len(words)
+            left=(maxlength-len_a)/2
+            right=maxlength-left-len_a           
+            sent=[]
+            for word in words:
+                id=word2id.get(word)
+                if id is not None:
+                    sent.append(id)
+            sent=[0]*left+sent+[0]*right
+            data_A2.append(sent)            
+            Length_A2.append(len_a)
+            leftPad_A2.append(left)
+            rightPad_A2.append(right)   
+#             #A1
+#             words=tokens[-2].strip().split()
+#             len_a=len(words)
+#             left=(maxlength-len_a)/2
+#             right=maxlength-left-len_a           
+#             sent=[]
+#             for word in words:
+#                 id=word2id.get(word)
+#                 if id is not None:
+#                     sent.append(id)
+#             sent=[0]*left+sent+[0]*right
+#             data_A3.append(sent)            
+#             Length_A3.append(len_a)
+#             leftPad_A3.append(left)
+#             rightPad_A3.append(right)   
+#             #A1
+#             words=tokens[-1].strip().split()
+#             len_a=len(words)
+#             left=(maxlength-len_a)/2
+#             right=maxlength-left-len_a           
+#             sent=[]
+#             for word in words:
+#                 id=word2id.get(word)
+#                 if id is not None:
+#                     sent.append(id)
+#             sent=[0]*left+sent+[0]*right
+#             data_A4.append(sent)            
+#             Length_A4.append(len_a)
+#             leftPad_A4.append(left)
+#             rightPad_A4.append(right)       
+            line_control+=1
+            #if line_control==50:
+            #    break
+        read_file.close()
+ 
+        
+        results=[numpy.array(data_D), numpy.array(data_A1), numpy.array(data_A2), numpy.array(Label), 
+                 numpy.array(Length_D),numpy.array(Length_D_s), numpy.array(Length_A1), numpy.array(Length_A2),
+                numpy.array(leftPad_D),numpy.array(leftPad_D_s), numpy.array(leftPad_A1), numpy.array(leftPad_A2),
+                numpy.array(rightPad_D),numpy.array(rightPad_D_s), numpy.array(rightPad_A1), numpy.array(rightPad_A2)]
+        return results, line_control
+
+
+
+    train_data, train_size=load_file(trainFile, vocab)
+    print 'train file loaded over, train size:', train_size
+
+    test_data, test_size=load_file(testFile, vocab)
+    print 'test file loaded over, test_size:', test_size
+
+
+    
+    def shared_dataset(data_y, borrow=True):
+        shared_y = theano.shared(numpy.asarray(data_y,
+                                               dtype=theano.config.floatX),  # @UndefinedVariable
+                                 borrow=borrow)
+        return T.cast(shared_y, 'int64')  
+        #return shared_y
+    
+    train_list=[shared_dataset(matt) for matt in train_data]
+
+    test_list=[shared_dataset(matt) for matt in test_data]       
+
+    return train_list, train_size, test_list, test_size, word_ind-1
