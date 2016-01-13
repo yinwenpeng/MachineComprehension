@@ -357,9 +357,10 @@ def evaluate_lenet5(learning_rate=0.001, n_epochs=2000, nkerns=[90,90], batch_si
 #     nega_simi=T.max([simi_overall_level2, simi_overall_level3, simi_overall_level4])
     #use ensembled simi
 #     cost=T.maximum(0.0, margin+T.max([simi_2, simi_3, simi_4])-simi_1) # ranking loss: max(0, margin-nega+posi)
-    cost=T.maximum(0.0, margin+simi_2-simi_1)
-    posi_simi=simi_1
-    nega_simi=simi_2
+#     cost=T.maximum(0.0, margin+simi_2-simi_1)
+    cost=T.maximum(0.0, margin+simi_sent_level2-simi_sent_level1)+T.maximum(0.0, margin+simi_doc_level2-simi_doc_level1)+T.maximum(0.0, margin+simi_overall_level2-simi_overall_level1)
+#     posi_simi=simi_1
+#     nega_simi=simi_2
 
 
     
@@ -370,7 +371,7 @@ def evaluate_lenet5(learning_rate=0.001, n_epochs=2000, nkerns=[90,90], batch_si
 
 
     
-    test_model = theano.function([index], [cost, posi_simi, nega_simi],
+    test_model = theano.function([index], [cost, simi_sent_level1, simi_sent_level2, simi_doc_level1, simi_doc_level2, simi_overall_level1, simi_overall_level2],
           givens={
             index_D: test_data_D[index], #a matrix
 #             index_Q: test_data_Q[index],
@@ -432,7 +433,7 @@ def evaluate_lenet5(learning_rate=0.001, n_epochs=2000, nkerns=[90,90], batch_si
 #             updates.append((param_i, param_i - learning_rate * grad_i / T.sqrt(acc)))   #AdaGrad
 #         updates.append((acc_i, acc))    
   
-    train_model = theano.function([index], [cost, posi_simi, nega_simi], updates=updates,
+    train_model = theano.function([index], [cost, simi_sent_level1, simi_sent_level2, simi_doc_level1, simi_doc_level2, simi_overall_level1, simi_overall_level2], updates=updates,
           givens={
             index_D: train_data_D[index],
 #             index_Q: train_data_Q[index],
@@ -466,7 +467,7 @@ def evaluate_lenet5(learning_rate=0.001, n_epochs=2000, nkerns=[90,90], batch_si
 #             right_A4: train_rightPad_A4[index]
             }, on_unused_input='ignore')
 
-    train_model_predict = theano.function([index], [cost, posi_simi, nega_simi],
+    train_model_predict = theano.function([index], [cost, simi_sent_level1, simi_sent_level2, simi_doc_level1, simi_doc_level2, simi_overall_level1, simi_overall_level2],
           givens={
             index_D: train_data_D[index],
 #             index_Q: train_data_Q[index],
@@ -538,8 +539,12 @@ def evaluate_lenet5(learning_rate=0.001, n_epochs=2000, nkerns=[90,90], batch_si
         #shuffle(train_batch_start)#shuffle training data
 
 
-        posi_train=[]
-        nega_train=[]
+        posi_train_sent=[]
+        nega_train_sent=[]
+        posi_train_doc=[]
+        nega_train_doc=[]
+        posi_train_overall=[]
+        nega_train_overall=[]
         for batch_start in train_batch_start: 
             # iter means how many batches have been runed, taking into loop
             iter = (epoch - 1) * n_train_batches + minibatch_index +1
@@ -547,42 +552,68 @@ def evaluate_lenet5(learning_rate=0.001, n_epochs=2000, nkerns=[90,90], batch_si
             sys.stdout.flush()
             minibatch_index=minibatch_index+1
             
-            cost_average, posi_simi, nega_simi= train_model(batch_start)
-            posi_train.append(posi_simi)
-            nega_train.append(nega_simi)
-
+            cost_average, simi_sent_level1, simi_sent_level2, simi_doc_level1, simi_doc_level2, simi_overall_level1, simi_overall_level2= train_model(batch_start)
+            posi_train_sent.append(simi_sent_level1)
+            nega_train_sent.append(simi_sent_level2)
+            posi_train_doc.append(simi_doc_level1)
+            nega_train_doc.append(simi_doc_level2)
+            posi_train_overall.append(simi_overall_level1)
+            nega_train_overall.append(simi_overall_level2)
             if iter % n_train_batches == 0:
-                corr_train=compute_corr(posi_train, nega_train)
-                print 'training @ iter = '+str(iter)+' average cost: '+str(cost_average)+'corr rate:'+str(corr_train*300.0/train_size)
+                corr_train_sent=compute_corr(posi_train_sent, nega_train_sent)
+                corr_train_doc=compute_corr(posi_train_doc, nega_train_doc)
+                corr_train_overall=compute_corr(posi_train_overall, nega_train_overall)
+                print 'training @ iter = '+str(iter)+' average cost: '+str(cost_average)+'corr rate:'+str(corr_train_sent*300.0/train_size)+' '+str(corr_train_doc*300.0/train_size)+' '+str(corr_train_overall*300.0/train_size)
 
             
             if iter % validation_frequency == 0:
-                posi_test=[]
-                nega_test=[]
+                posi_test_sent=[]
+                nega_test_sent=[]
+                posi_test_doc=[]
+                nega_test_doc=[]
+                posi_test_overall=[]
+                nega_test_overall=[]
                 for i in test_batch_start:
-                    cost, posi_simi, nega_simi=test_model(i)
-                    posi_test.append(posi_simi)
-                    nega_test.append(nega_simi)
-                corr_test=compute_corr(posi_test, nega_test)
+                    cost, simi_sent_level1, simi_sent_level2, simi_doc_level1, simi_doc_level2, simi_overall_level1, simi_overall_level2=test_model(i)
+                    posi_test_sent.append(simi_sent_level1)
+                    nega_test_sent.append(simi_sent_level2)
+                    posi_test_doc.append(simi_doc_level1)
+                    nega_test_doc.append(simi_doc_level2)
+                    posi_test_overall.append(simi_overall_level1)
+                    nega_test_overall.append(simi_overall_level2)
+                corr_test_sent=compute_corr(posi_test_sent, nega_test_sent)
+                corr_test_doc=compute_corr(posi_test_doc, nega_test_doc)
+                corr_test_overall=compute_corr(posi_test_overall, nega_test_overall)
 
                 #write_file.close()
                 #test_score = numpy.mean(test_losses)
-                test_acc=corr_test*1.0/(test_size/3.0)
+                test_acc_sent=corr_test_sent*1.0/(test_size/3.0)
+                test_acc_doc=corr_test_doc*1.0/(test_size/3.0)
+                test_acc_overall=corr_test_overall*1.0/(test_size/3.0)
                 #test_acc=1-test_score
-                print(('\t\t\tepoch %i, minibatch %i/%i, test acc of best '
-                           'model %f %%') %
-                          (epoch, minibatch_index, n_train_batches,test_acc * 100.))
+#                 print(('\t\t\tepoch %i, minibatch %i/%i, test acc of best '
+#                            'model %f %%') %
+#                           (epoch, minibatch_index, n_train_batches,test_acc * 100.))
+                print '\t\t\tepoch', epoch, ', minibatch', minibatch_index, '/', n_train_batches, 'test acc of best model', test_acc_sent*100,test_acc_doc*100,test_acc_overall*100 
                 #now, see the results of LR
                 #write_feature=open(rootPath+'feature_check.txt', 'w')
                  
 
   
                 find_better=False
-                if test_acc > max_acc:
-                    max_acc=test_acc
+                if test_acc_sent > max_acc:
+                    max_acc=test_acc_sent
                     best_epoch=epoch    
-                    find_better=True             
-                print '\t\t\ttest_acc:', test_acc, 'max:',    max_acc,'(at',best_epoch,')'
+                    find_better=True     
+                if test_acc_doc > max_acc:
+                    max_acc=test_acc_doc
+                    best_epoch=epoch    
+                    find_better=True 
+                if test_acc_overall > max_acc:
+                    max_acc=test_acc_overall
+                    best_epoch=epoch    
+                    find_better=True         
+                print '\t\t\tmax:',    max_acc,'(at',best_epoch,')'
                 if find_better==True:
                     store_model_to_file(params, best_epoch, max_acc)
                     print 'Finished storing best params'  
