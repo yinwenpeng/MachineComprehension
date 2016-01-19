@@ -61,20 +61,7 @@ def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[50,50], batch_siz
     rng = numpy.random.RandomState(23455)
     train_data,train_size, test_data, test_size, vocab_size=load_MCTest_corpus_DQAAAA(rootPath+'vocab_DQAAAA.txt', rootPath+'mc500.train.tsv_standardlized.txt_DQAAAA.txt', rootPath+'mc500.test.tsv_standardlized.txt_DQAAAA.txt', max_s_length,maxSentLength, maxDocLength)#vocab_size contain train, dev and test
 
-    #datasets_nonoverlap, vocab_size_nonoverlap=load_SICK_corpus(rootPath+'vocab_nonoverlap_train_plus_dev.txt', rootPath+'train_plus_dev_removed_overlap_as_training.txt', rootPath+'test_removed_overlap_as_training.txt', max_truncate_nonoverlap,maxSentLength_nonoverlap, entailment=True)
-    #datasets, vocab_size=load_wikiQA_corpus(rootPath+'vocab_lower_in_word2vec.txt', rootPath+'WikiQA-train.txt', rootPath+'test_filtered.txt', maxSentLength)#vocab_size contain train, dev and test
-    #mtPath='/mounts/data/proj/wenpeng/Dataset/WikiQACorpus/MT/BLEU_NIST/'
-#     mt_train, mt_test=load_mts_wikiQA(rootPath+'Train_plus_dev_MT/concate_14mt_train.txt', rootPath+'Test_MT/concate_14mt_test.txt')
-#     extra_train, extra_test=load_extra_features(rootPath+'train_plus_dev_rule_features_cosine_eucli_negation_len1_len2_syn_hyper1_hyper2_anto(newsimi0.4).txt', rootPath+'test_rule_features_cosine_eucli_negation_len1_len2_syn_hyper1_hyper2_anto(newsimi0.4).txt')
-#     discri_train, discri_test=load_extra_features(rootPath+'train_plus_dev_discri_features_0.3.txt', rootPath+'test_discri_features_0.3.txt')
-    #wm_train, wm_test=load_wmf_wikiQA(rootPath+'train_word_matching_scores.txt', rootPath+'test_word_matching_scores.txt')
-    #wm_train, wm_test=load_wmf_wikiQA(rootPath+'train_word_matching_scores_normalized.txt', rootPath+'test_word_matching_scores_normalized.txt')
 
-# results=[numpy.array(data_D), numpy.array(data_Q), numpy.array(data_A1), numpy.array(data_A2), numpy.array(data_A3), numpy.array(data_A4), numpy.array(Label), 
-#          numpy.array(Length_D),numpy.array(Length_D_s), numpy.array(Length_Q), numpy.array(Length_A1), numpy.array(Length_A2), numpy.array(Length_A3), numpy.array(Length_A4),
-#         numpy.array(leftPad_D),numpy.array(leftPad_D_s), numpy.array(leftPad_Q), numpy.array(leftPad_A1), numpy.array(leftPad_A2), numpy.array(leftPad_A3), numpy.array(leftPad_A4),
-#         numpy.array(rightPad_D),numpy.array(rightPad_D_s), numpy.array(rightPad_Q), numpy.array(rightPad_A1), numpy.array(rightPad_A2), numpy.array(rightPad_A3), numpy.array(rightPad_A4)]
-# return results, line_control
     [train_data_D, train_data_Q, train_data_A1, train_data_A2, train_data_A3, train_data_A4, train_Label, 
                  train_Length_D,train_Length_D_s, train_Length_Q, train_Length_A1, train_Length_A2, train_Length_A3, train_Length_A4,
                 train_leftPad_D,train_leftPad_D_s, train_leftPad_Q, train_leftPad_A1, train_leftPad_A2, train_leftPad_A3, train_leftPad_A4,
