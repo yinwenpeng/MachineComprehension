@@ -133,8 +133,9 @@ def length_sent_text():
     #max_sent_length 57 max_text_length 59
 #     files=['mc500.train.tsv_standardlized.txt', 'mc500.dev.tsv_standardlized.txt','mc500.test.tsv_standardlized.txt','mc160.train.tsv_standardlized.txt', 'mc160.dev.tsv_standardlized.txt','mc160.test.tsv_standardlized.txt']                
     #max_sent_length 57 max_text_length 59
-    files=['mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt', 'mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt', 'mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt']                
-
+#    files=['mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt', 'mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt', 'mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt']                
+    files=['mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt', 'mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt', 'mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt',
+           'mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt', 'mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt', 'mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt']
     max_sent_length=0
     max_text_length=0
     sent_l2count=collections.defaultdict(int)
@@ -155,15 +156,20 @@ def length_sent_text():
 #     print sent_l2count
 def Extract_Vocab():
 #    files=['mc500.train.tsv_standardlized.txt', 'mc500.dev.tsv_standardlized.txt','mc500.test.tsv_standardlized.txt','mc160.train.tsv_standardlized.txt', 'mc160.dev.tsv_standardlized.txt','mc160.test.tsv_standardlized.txt'] 
-    files=['mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt', 'mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt', 'mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt']                
+#    files=['mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt', 'mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt', 'mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt','mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt']                
+#     files=['mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt', 'mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt', 'mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt',
+#            'mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt', 'mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt', 'mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_clean.txt']
 
-    writeFile=open(path+'vocab_DSSSS.txt', 'w')
+    files=['mc500.train.tsv_standardlized.txt_DQAAAA.txt', 'mc500.dev.tsv_standardlized.txt_DQAAAA.txt', 'mc500.test.tsv_standardlized.txt_DQAAAA.txt',
+           'mc160.train.tsv_standardlized.txt_DQAAAA.txt', 'mc160.dev.tsv_standardlized.txt_DQAAAA.txt', 'mc160.test.tsv_standardlized.txt_DQAAAA.txt']
+
+    writeFile=open(path+'vocab_DQAAAA.txt', 'w')
     vocab={}
     count=0
     for file in files:
         readFile=open(path+file, 'r')
         for line in readFile:
-            tokens=line.strip().split('\t')
+            tokens=line.strip().lower().split('\t')#consider lowercase always
             sent_size=len(tokens)-1
             for i in range(sent_size):
                 words=tokens[i+1].strip().split()
@@ -219,8 +225,8 @@ def transcate_glove():
             glove[tokens[0]]=map(float, tokens[1:])
     readFile.close()
     print 'glove loaded over...'
-    readFile=open(path+'vocab_DSSSS.txt', 'r')
-    writeFile=open(path+'vocab_glove_50d.txt', 'w')
+    readFile=open(path+'vocab_DQAAAA.txt', 'r')
+    writeFile=open(path+'vocab_DQAAAA_glove_50d.txt', 'w')
     #random_emb=list(numpy.random.uniform(-0.01,0.01,dim))
     unk=0
     for line in readFile:
@@ -308,6 +314,7 @@ def change_DQAS_into_DSSSS():
         writefile.close()
         readfile.close()
     print 'over'      
+
 def combine_standardlize_statement(standfile, statefile):
     readstand=open(path+standfile, 'r')
     readstate=open(path+statefile, 'r')
@@ -347,6 +354,59 @@ def change_DSSSS_to_DPN(inputfile):
     readfile.close()
     print 'over'
                   
+def change_DPN_to_DPNQ(dpnfile, qfile):
+    readfile=open(path+qfile, 'r')
+    Q=[]
+    line_no=0
+    for line in readfile:
+        q=line.strip().split('\t')[-3].strip()
+        if line_no%4==0:
+            Q.append(q)
+        line_no+=1
+    print 'len(Q):', len(Q)
+    readfile.close()
+    readfile=open(path+dpnfile, 'r')
+    writefile=open(path+dpnfile+'_DPNQ.txt', 'w')
+    line_no=0
+    for line in readfile:
+        writefile.write(line.strip()+'\t')
+        q_index=line_no/3
+        writefile.write(Q[q_index]+'\n')
+        line_no+=1
+    writefile.close()
+    readfile.close
+    print 'over'
+        
+def remove_noise_sents_DPN(infile):
+    stopfile=open(path+'stopwords.txt', 'r')
+    stops=set()
+    for line in stopfile:
+        stops.add(line.strip())
+    stopfile.close()
+    readfile=open(path+infile, 'r')
+    writefile=open(path+infile+'_clean.txt', 'w')
+    for line in readfile:
+        parts=line.strip().lower().split('\t')  # from now, we use lowercase
+        vocab=set(parts[-2].split()+parts[-1].split())-stops
+        if len(vocab)==0:
+            print 'all stop words in statements'
+            print parts[-2], parts[-1]
+            exit(0)
+        writefile.write(parts[0].strip())
+        valid_doc=False
+        for sent in parts[1:-2]:
+            sent_set=set(sent.split())-stops
+            if len(sent_set & vocab)>0:
+                writefile.write('\t'+sent)
+                valid_doc=True
+        if valid_doc is False:
+            print 'empty doc', parts[-2], parts[-1]
+            writefile.write('\t'+parts[1])# if all sentences are removed, only write the first one
+        writefile.write('\t'+parts[-2]+'\t'+parts[-1]+'\n')
+    writefile.close()
+    readfile.close()
+    print 'over'
+
 if __name__ == '__main__':
 #     standardlize('mc500.train.ans', 'mc500.train.tsv')
 #     standardlize('mc500.dev.ans', 'mc500.dev.tsv')
@@ -357,7 +417,7 @@ if __name__ == '__main__':
 #     length_sent_text()
 #     Extract_Vocab()
 #     transcate_word2vec()
-#     transcate_glove()
+    transcate_glove()
 #     change_DQA_into_DQAAAA()
 
 #     combine_standardlize_statement('mc500.train.tsv_standardlized.txt', 'Statements/mc500.train.statements.tsv')
@@ -367,11 +427,23 @@ if __name__ == '__main__':
 #     combine_standardlize_statement('mc160.dev.tsv_standardlized.txt', 'Statements/mc160.dev.statements.tsv')
 #     combine_standardlize_statement('mc160.test.tsv_standardlized.txt', 'Statements/mc160.test.statements.tsv')
 #     change_DQAS_into_DSSSS()
-    change_DSSSS_to_DPN('mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
-    change_DSSSS_to_DPN('mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
-    change_DSSSS_to_DPN('mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
-    change_DSSSS_to_DPN('mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
-    change_DSSSS_to_DPN('mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
-    change_DSSSS_to_DPN('mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
-       
+#     change_DSSSS_to_DPN('mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
+#     change_DSSSS_to_DPN('mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
+#     change_DSSSS_to_DPN('mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
+#     change_DSSSS_to_DPN('mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
+#     change_DSSSS_to_DPN('mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
+#     change_DSSSS_to_DPN('mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt')
+#     change_DPN_to_DPNQ('mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt', 'mc500.train.tsv_standardlized.txt_with_state.txt')
+#     change_DPN_to_DPNQ('mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt', 'mc500.dev.tsv_standardlized.txt_with_state.txt')
+#     change_DPN_to_DPNQ('mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt', 'mc500.test.tsv_standardlized.txt_with_state.txt')
+#     change_DPN_to_DPNQ('mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt', 'mc160.train.tsv_standardlized.txt_with_state.txt')
+#     change_DPN_to_DPNQ('mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt', 'mc160.dev.tsv_standardlized.txt_with_state.txt')
+#     change_DPN_to_DPNQ('mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt', 'mc160.test.tsv_standardlized.txt_with_state.txt')
+
+#     remove_noise_sents_DPN('mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt')
+#     remove_noise_sents_DPN('mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt')
+#     remove_noise_sents_DPN('mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt')
+#     remove_noise_sents_DPN('mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt')
+#     remove_noise_sents_DPN('mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt')
+#     remove_noise_sents_DPN('mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt')
         

@@ -5,6 +5,29 @@ from theano.tensor.nnet import conv
 from cis.deep.utils.theano import debug_print
 from WPDefined import repeat_whole_matrix, repeat_whole_tensor
 
+
+def create_HiddenLayer_para(rng, n_in, n_out):
+
+    W_values = numpy.asarray(rng.uniform(
+            low=-numpy.sqrt(6. / (n_in + n_out)),
+            high=numpy.sqrt(6. / (n_in + n_out)),
+            size=(n_in, n_out)), dtype=theano.config.floatX)  # @UndefinedVariable
+    W = theano.shared(value=W_values, name='W', borrow=True)
+
+    b_values = numpy.zeros((n_out,), dtype=theano.config.floatX)  # @UndefinedVariable
+    b = theano.shared(value=b_values, name='b', borrow=True)
+    return W,b
+def create_GRU_para(rng, word_dim, hidden_dim):
+        # Initialize the network parameters
+        U = numpy.random.uniform(-numpy.sqrt(1./hidden_dim), numpy.sqrt(1./hidden_dim), (3, hidden_dim, word_dim))
+        W = numpy.random.uniform(-numpy.sqrt(1./hidden_dim), numpy.sqrt(1./hidden_dim), (3, hidden_dim, hidden_dim))
+        b = numpy.zeros((3, hidden_dim))
+        # Theano: Created shared variables
+        U = debug_print(theano.shared(name='U', value=U.astype(theano.config.floatX), borrow=True), 'U')
+        W = debug_print(theano.shared(name='W', value=W.astype(theano.config.floatX), borrow=True), 'W')
+        b = debug_print(theano.shared(name='b', value=b.astype(theano.config.floatX), borrow=True), 'b')
+        return U, W, b
+
 def create_ensemble_para(rng, fan_in, fan_out):
 
         # initialize weights with random weights
@@ -45,6 +68,26 @@ def create_conv_para(rng, filter_shape):
         b = theano.shared(value=b_values, borrow=True)
         return W, b
 
+def create_rnn_para(rng, dim):
+        # initialize weights with random weights
+        W_bound = numpy.sqrt(6. / (2*dim + dim))
+#         Whh = theano.shared(numpy.asarray(
+#             rng.uniform(low=-W_bound, high=W_bound, size=(dim, dim)),
+#             dtype=theano.config.floatX),
+#                                borrow=True)
+#         Wxh = theano.shared(numpy.asarray(
+#             rng.uniform(low=-W_bound, high=W_bound, size=(dim, dim)),
+#             dtype=theano.config.floatX),
+#                                borrow=True)
+        W = theano.shared(numpy.asarray(
+            rng.uniform(low=-W_bound, high=W_bound, size=(2*dim, dim)),
+            dtype=theano.config.floatX),
+                               borrow=True)        
+        # the bias is a 1D tensor -- one bias per output feature map
+        b_values = numpy.zeros((dim,), dtype=theano.config.floatX)
+        b = theano.shared(value=b_values, borrow=True)
+        return W, b
+
 class Conv_with_input_para(object):
     """Pool Layer of a convolutional network """
 
@@ -74,7 +117,126 @@ class Conv_with_input_para(object):
         # store parameters of this layer
         self.params = [self.W, self.b]
 
+class RNN_with_input_para(object):
+    """Pool Layer of a convolutional network """
 
+    def __init__(self, rng, input, rnn_Whh, rnn_Wxh, rnn_b, dim):
+        self.input = input.transpose(1,0) #iterate over first dim
+        self.Whh = rnn_Whh
+        self.Wxh=rnn_Wxh
+        self.b = rnn_b
+        self.h0 = theano.shared(name='h0',
+                                value=numpy.zeros(dim,
+                                dtype=theano.config.floatX))
+        def recurrence(x_t, h_tm1):
+            w_t = T.nnet.sigmoid(T.dot(x_t, self.Wxh)
+                                 + T.dot(h_tm1, self.Whh) + self.b)
+            h_t=h_tm1*w_t+x_t*(1-w_t)
+#             s_t = T.nnet.softmax(T.dot(h_t, self.w) + self.b)
+            return h_t
+        
+        h, _ = theano.scan(fn=recurrence,
+                                sequences=self.input,
+                                outputs_info=self.h0,#[self.h0, None],
+                                n_steps=self.input.shape[0])        
+        self.output=h.reshape((self.input.shape[0], self.input.shape[1])).transpose(1,0)
+        
+
+        # store parameters of this layer
+        self.params = [self.Whh, self.Wxh, self.b]
+
+class GRU_Matrix_Input(object):
+    def __init__(self, X, word_dim, hidden_dim, U, W, b, bptt_truncate):
+        self.hidden_dim = hidden_dim
+        self.bptt_truncate = bptt_truncate
+        
+        def forward_prop_step(x_t, s_t1_prev):            
+            # GRU Layer 1
+            z_t1 =debug_print( T.nnet.sigmoid(U[0].dot(x_t) + W[0].dot(s_t1_prev) + b[0]), 'z_t1')
+            r_t1 = debug_print(T.nnet.sigmoid(U[1].dot(x_t) + W[1].dot(s_t1_prev) + b[1]), 'r_t1')
+            c_t1 = debug_print(T.tanh(U[2].dot(x_t) + W[2].dot(s_t1_prev * r_t1) + b[2]), 'c_t1')
+            s_t1 = debug_print((T.ones_like(z_t1) - z_t1) * c_t1 + z_t1 * s_t1_prev, 's_t1')
+            return s_t1
+        
+        s, updates = theano.scan(
+            forward_prop_step,
+            sequences=X.transpose(1,0),
+            truncate_gradient=self.bptt_truncate,
+            outputs_info=dict(initial=T.zeros(self.hidden_dim)))
+        
+        self.output_matrix=debug_print(s.transpose(), 'GRU_Matrix_Input.output_matrix')
+        self.output_vector_mean=T.mean(self.output_matrix, axis=1)
+        self.output_vector_max=T.max(self.output_matrix, axis=1)
+        self.output_vector_last=self.output_matrix[:,-1]
+
+class GRU_Tensor3_Input(object):
+    def __init__(self, T, lefts, rights, hidden_dim, U, W, b):
+        T=debug_print(T,'T')
+        lefts=debug_print(lefts, 'lefts')
+        rights=debug_print(rights, 'rights')
+        def recurrence(matrix, left, right):
+            sub_matrix=debug_print(matrix[:,left:-right], 'sub_matrix')
+            GRU_layer=GRU_Matrix_Input(sub_matrix, sub_matrix.shape[0], hidden_dim,U,W,b, -1)
+            return GRU_layer.output_vector_mean
+        new_M, updates = theano.scan(recurrence,
+                                     sequences=[T, lefts, rights],
+                                     outputs_info=None)
+        self.output=debug_print(new_M.transpose(), 'GRU_Tensor3_Input.output')
+
+class biRNN_with_input_para(object):
+    """Pool Layer of a convolutional network """
+
+    def __init__(self, rng, input, rnn_W, rnn_b, rnn_W_r, rnn_b_r, dim):
+        self.input = debug_print(input.transpose(1,0), 'self.input') #iterate over first dim
+        self.rnn_W=rnn_W
+        self.b = rnn_b
+
+        self.Wr = rnn_W_r
+        self.b_r = rnn_b_r
+        self.h0 = theano.shared(name='h0',
+                                value=numpy.zeros(dim,
+                                dtype=theano.config.floatX))
+        self.h0_r = theano.shared(name='h0',
+                                value=numpy.zeros(dim,
+                                dtype=theano.config.floatX))
+        def recurrence(x_t, h_tm1):
+            concate=T.concatenate([x_t,h_tm1], axis=0)
+#             w_t = T.nnet.sigmoid(T.dot(x_t, self.Wxh)
+#                                  + T.dot(h_tm1, self.Whh) + self.b)
+            w_t = T.nnet.sigmoid(T.dot(concate, self.rnn_W) + self.b)
+            h_t=h_tm1*w_t+x_t*(1-w_t)
+#             s_t = T.nnet.softmax(T.dot(h_t, self.w) + self.b)
+            return h_t
+         
+        h, _ = theano.scan(fn=recurrence,
+                                sequences=self.input,
+                                outputs_info=self.h0,#[self.h0, None],
+                                n_steps=self.input.shape[0])        
+        self.output_one=debug_print(h.reshape((self.input.shape[0], self.input.shape[1])).transpose(1,0), 'self.output_one')
+        #reverse direction
+        self.input_two=debug_print(input[:,::-1].transpose(1,0), 'self.input_two')
+        def recurrence_r(x_t_r, h_tm1_r):
+            concate=T.concatenate([x_t_r,h_tm1_r], axis=0)
+#             w_t = T.nnet.sigmoid(T.dot(x_t, self.Wxh)
+#                                  + T.dot(h_tm1, self.Whh) + self.b)
+            w_t = T.nnet.sigmoid(T.dot(concate, self.Wr) + self.b_r)
+#             h_t=h_tm1*w_t+x_t*(1-w_t)
+# #             s_t = T.nnet.softmax(T.dot(h_t, self.w) + self.b)
+# 
+# 
+#             w_t = T.nnet.sigmoid(T.dot(x_t_r, self.Wxh_r)
+#                                  + T.dot(h_tm1_r, self.Whh_r) + self.b_r)
+            h_t=h_tm1_r*w_t+x_t_r*(1-w_t)
+#             s_t = T.nnet.softmax(T.dot(h_t, self.w) + self.b)
+            return h_t        
+        h_r, _ = theano.scan(fn=recurrence_r,
+                                sequences=self.input_two,
+                                outputs_info=self.h0_r,#[self.h0, None],
+                                n_steps=self.input_two.shape[0])        
+        self.output_two=debug_print(h_r.reshape((self.input_two.shape[0], self.input_two.shape[1])).transpose(1,0)[:,::-1], 'self.output_two')
+        self.output=debug_print(self.output_one+self.output_two, 'self.output')
+#         # store parameters of this layer
+#         self.params = [self.Whh, self.Wxh, self.b]
 class Conv_with_input_para_one_col_featuremap(object):
     """Pool Layer of a convolutional network """
 
@@ -384,21 +546,22 @@ class Average_Pooling_Scan(object):
             input_l_matrix=debug_print(input_l_matrix[:, left_l:(input_l_matrix.shape[1]-right_l)],'input_l_matrix')
 #             input_r_matrix=debug_print(input_r.reshape((input_r.shape[2], input_r.shape[3])),'origin_input_r_matrix')#input_r should be order4 tensor still
 #             input_r_matrix=debug_print(input_r_matrix[:, left_r:(input_r_matrix.shape[1]-right_r)],'input_r_matrix')
-#             
-#             
+#              
+#              
 #             simi_tensor=compute_simi_feature_batch1_new(input_l_matrix, input_r_matrix, length_l, length_r, self.W, dim) #(input.shape[0]/2, input.shape[1], input.shape[3], input.shape[3])
 #             simi_question=debug_print(T.max(simi_tensor, axis=1).reshape((1, length_l)),'simi_question')
-#             
+#              
 #             neighborsArgSorted = T.argsort(simi_question, axis=1)
 #             kNeighborsArg = neighborsArgSorted[:,-topk:]#only average the top 3 vectors
 #             kNeighborsArgSorted = T.sort(kNeighborsArg, axis=1) # make y indices in acending lie
 #             jj = kNeighborsArgSorted.flatten()
 #             sub_matrix=input_l_matrix.transpose(1,0)[jj].reshape((topk, input_l_matrix.shape[0]))
 #             sub_weights=simi_question.transpose(1,0)[jj].reshape((topk, 1))
-#             
+#               
 #             sub_weights =sub_weights/T.sum(sub_weights) #L-1 normalize attentions
 #             sub_weights=T.repeat(sub_weights, kernn, axis=1)
-#             dot_l=debug_print(T.sum(sub_matrix*sub_weights, axis=0), 'dot_l') # is a column now        
+#             dot_l=debug_print(T.sum(sub_matrix*sub_weights, axis=0), 'dot_l') # is a column now     
+#             dot_l=T.max(sub_matrix, axis=0)   
             dot_l=debug_print(T.max(input_l_matrix, axis=1), 'dot_l') # max pooling
             return dot_l
 
@@ -436,7 +599,7 @@ class Average_Pooling_Scan(object):
         left_padding = T.zeros((input_D.shape[2], left_D), dtype=theano.config.floatX)
         right_padding = T.zeros((input_D.shape[2], right_D), dtype=theano.config.floatX)
         matrix_padded = T.concatenate([left_padding, valid_matrix, right_padding], axis=1)         
-        self.output_D=matrix_padded
+        self.output_D=matrix_padded   #it shows the second conv for doc has input of all sentences
         self.output_D_valid_part=valid_matrix
         self.output_QA_sent_level_rep=T.max(input_r_matrix, axis=1)
         
@@ -468,6 +631,62 @@ class Average_Pooling_Scan(object):
         
 
         self.params = [self.W]
+
+def drop(input, p, rng): 
+    """
+    :type input: numpy.array
+    :param input: layer or weight matrix on which dropout resp. dropconnect is applied
+    
+    :type p: float or double between 0. and 1. 
+    :param p: p probability of NOT dropping out a unit or connection, therefore (1.-p) is the drop rate.
+    
+    """            
+    srng = T.shared_randomstreams.RandomStreams(rng.randint(999999))
+    mask = srng.binomial(n=1, p=p, size=input.shape, dtype=theano.config.floatX)
+    return input * mask
+class Average_Pooling_RNN(object):
+    """The input is output of Conv: a tensor.  The output here should also be tensor"""
+
+    def __init__(self, rng, input_D, input_r, kern, left_D, right_D,doc_len, topk): # length_l, length_r: valid lengths after conv
+#     layer1_DQ=Average_Pooling(rng, input_l=layer0_D_output, input_r=layer0_Q_output, kern=nkerns[0],
+#                                       left_D=left_D, right_D=right_D,
+#                      left_l=left_D_s, right_l=right_D_s, left_r=left_Q, right_r=right_Q, 
+#                       length_l=len_D_s+filter_words[1]-1, length_r=len_Q+filter_words[1]-1,
+#                        dim=maxSentLength+filter_words[1]-1, doc_len=maxDocLength, topk=3)
+
+
+        
+
+
+        self.output_D_valid_part=input_D
+        self.output_QA_sent_level_rep=input_r
+        
+        #now, average pooling by comparing self.output_QA and self.output_D_valid_part, choose one key sentence
+        topk=1
+        simi_matrix=debug_print(compute_simi_feature_matrix_with_column(self.output_D_valid_part, self.output_QA_sent_level_rep, doc_len-left_D-right_D, 1, doc_len), 'simi_matrix_matrix_with_column') #(input.shape[0]/2, input.shape[1], input.shape[3], input.shape[3])
+        simi_question=debug_print(simi_matrix.reshape((1, doc_len-left_D-right_D)),'simi_question')
+         
+        neighborsArgSorted = T.argsort(simi_question, axis=1)
+        kNeighborsArg = neighborsArgSorted[:,-topk:]#only average the top 3 vectors
+        kNeighborsArgSorted = T.sort(kNeighborsArg, axis=1) # make y indices in acending lie
+        jj = kNeighborsArgSorted.flatten()
+        sub_matrix=self.output_D_valid_part.transpose(1,0)[jj].reshape((topk, self.output_D_valid_part.shape[0]))
+        sub_weights=simi_question.transpose(1,0)[jj].reshape((topk, 1))
+         
+        sub_weights =sub_weights/T.sum(sub_weights) #L-1 normalize attentions
+        #weights_answer=simi_answer/T.sum(simi_answer)    
+        #concate=T.concatenate([weights_question, weights_answer], axis=1)
+        #reshaped_concate=concate.reshape((input.shape[0], 1, 1, length_last_dim))
+         
+        sub_weights=T.repeat(sub_weights, kern, axis=1)
+        #weights_answer_matrix=T.repeat(weights_answer, kern, axis=0)
+         
+        #with attention
+#         output_D_sent_level_rep=debug_print(T.sum(sub_matrix*sub_weights, axis=0), 'output_D_sent_level_rep') # is a column now    
+        output_D_rep=debug_print(T.max(sub_matrix, axis=0), 'output_D_rep') # is a column now    
+        self.output_D_sent_level_rep=output_D_rep    
+
+
 def compute_simi_feature_batch1_new(input_l_matrix, input_r_matrix, length_l, length_r, para_matrix, dim):
     #matrix_r_after_translate=debug_print(T.dot(para_matrix, input_r_matrix), 'matrix_r_after_translate')
     matrix_r_after_translate=input_r_matrix
