@@ -17,6 +17,26 @@ def create_HiddenLayer_para(rng, n_in, n_out):
     b_values = numpy.zeros((n_out,), dtype=theano.config.floatX)  # @UndefinedVariable
     b = theano.shared(value=b_values, name='b', borrow=True)
     return W,b
+
+def create_Bi_GRU_para(rng, word_dim, hidden_dim):
+        # Initialize the network parameters
+        U = numpy.random.uniform(-numpy.sqrt(1./hidden_dim), numpy.sqrt(1./hidden_dim), (3, hidden_dim, word_dim))
+        W = numpy.random.uniform(-numpy.sqrt(1./hidden_dim), numpy.sqrt(1./hidden_dim), (3, hidden_dim, hidden_dim))
+        b = numpy.zeros((3, hidden_dim))
+        # Theano: Created shared variables
+        U = debug_print(theano.shared(name='U', value=U.astype(theano.config.floatX), borrow=True), 'U')
+        W = debug_print(theano.shared(name='W', value=W.astype(theano.config.floatX), borrow=True), 'W')
+        b = debug_print(theano.shared(name='b', value=b.astype(theano.config.floatX), borrow=True), 'b')
+
+        Ub = numpy.random.uniform(-numpy.sqrt(1./hidden_dim), numpy.sqrt(1./hidden_dim), (3, hidden_dim, word_dim))
+        Wb = numpy.random.uniform(-numpy.sqrt(1./hidden_dim), numpy.sqrt(1./hidden_dim), (3, hidden_dim, hidden_dim))
+        bb = numpy.zeros((3, hidden_dim))
+        # Theano: Created shared variables
+        Ub = debug_print(theano.shared(name='Ub', value=Ub.astype(theano.config.floatX), borrow=True), 'Ub')
+        Wb = debug_print(theano.shared(name='Wb', value=Wb.astype(theano.config.floatX), borrow=True), 'Wb')
+        bb = debug_print(theano.shared(name='bb', value=bb.astype(theano.config.floatX), borrow=True), 'bb')
+        return U, W, b, Ub, Wb, bb
+    
 def create_GRU_para(rng, word_dim, hidden_dim):
         # Initialize the network parameters
         U = numpy.random.uniform(-numpy.sqrt(1./hidden_dim), numpy.sqrt(1./hidden_dim), (3, hidden_dim, word_dim))
@@ -144,7 +164,65 @@ class RNN_with_input_para(object):
 
         # store parameters of this layer
         self.params = [self.Whh, self.Wxh, self.b]
+class Bi_GRU_Matrix_Input(object):
+    def __init__(self, X, word_dim, hidden_dim, U, W, b, U_b, W_b, b_b, bptt_truncate):
+        self.hidden_dim = hidden_dim
+        self.bptt_truncate = bptt_truncate
+        
+        def forward_prop_step(x_t, s_t1_prev):            
+            # GRU Layer 1
+            z_t1 =debug_print( T.nnet.sigmoid(U[0].dot(x_t) + W[0].dot(s_t1_prev) + b[0]), 'z_t1')
+            r_t1 = debug_print(T.nnet.sigmoid(U[1].dot(x_t) + W[1].dot(s_t1_prev) + b[1]), 'r_t1')
+            c_t1 = debug_print(T.tanh(U[2].dot(x_t) + W[2].dot(s_t1_prev * r_t1) + b[2]), 'c_t1')
+            s_t1 = debug_print((T.ones_like(z_t1) - z_t1) * c_t1 + z_t1 * s_t1_prev, 's_t1')
+            return s_t1
+        
+        s, updates = theano.scan(
+            forward_prop_step,
+            sequences=X.transpose(1,0),
+            truncate_gradient=self.bptt_truncate,
+            outputs_info=dict(initial=T.zeros(self.hidden_dim)))
+        
+#         self.output_matrix=debug_print(s.transpose(), 'GRU_Matrix_Input.output_matrix')
+#         self.output_vector_mean=T.mean(self.output_matrix, axis=1)
+#         self.output_vector_max=T.max(self.output_matrix, axis=1)
+#         self.output_vector_last=self.output_matrix[:,-1]
+        #backward
+        X_b=X[:,::-1]
+        def backward_prop_step(x_t_b, s_t1_prev_b):            
+            # GRU Layer 1
+            z_t1_b =debug_print( T.nnet.sigmoid(U_b[0].dot(x_t_b) + W_b[0].dot(s_t1_prev_b) + b_b[0]), 'z_t1_b')
+            r_t1_b = debug_print(T.nnet.sigmoid(U_b[1].dot(x_t_b) + W_b[1].dot(s_t1_prev_b) + b_b[1]), 'r_t1_b')
+            c_t1_b = debug_print(T.tanh(U_b[2].dot(x_t_b) + W_b[2].dot(s_t1_prev_b * r_t1_b) + b_b[2]), 'c_t1_b')
+            s_t1_b = debug_print((T.ones_like(z_t1_b) - z_t1_b) * c_t1_b + z_t1_b * s_t1_prev_b, 's_t1_b')
+            return s_t1_b
+        
+        s_b, updates_b = theano.scan(
+            backward_prop_step,
+            sequences=X_b.transpose(1,0),
+            truncate_gradient=self.bptt_truncate,
+            outputs_info=dict(initial=T.zeros(self.hidden_dim)))
+        #dim: hidden_dim*2        
+        self.output_matrix=debug_print(T.concatenate([s.transpose(), s_b.transpose()[:,::-1]], axis=0), 'Bi_GRU_Matrix_Input.output_matrix')
+        self.output_vector_mean=T.mean(self.output_matrix, axis=1)
+        self.output_vector_max=T.max(self.output_matrix, axis=1)
+        #dim: hidden_dim*4
+        self.output_vector_last=T.concatenate([self.output_matrix[:,-1], self.output_matrix[:,0]], axis=0)
 
+class Bi_GRU_Tensor3_Input(object):
+    def __init__(self, T, lefts, rights, hidden_dim, U, W, b, Ub,Wb,bb):
+        T=debug_print(T,'T')
+        lefts=debug_print(lefts, 'lefts')
+        rights=debug_print(rights, 'rights')
+        def recurrence(matrix, left, right):
+            sub_matrix=debug_print(matrix[:,left:-right], 'sub_matrix')
+            GRU_layer=Bi_GRU_Matrix_Input(sub_matrix, sub_matrix.shape[0], hidden_dim,U,W,b, Ub,Wb,bb, -1)
+            return GRU_layer.output_vector_mean
+        new_M, updates = theano.scan(recurrence,
+                                     sequences=[T, lefts, rights],
+                                     outputs_info=None)
+        self.output=debug_print(new_M.transpose(), 'Bi_GRU_Tensor3_Input.output')
+        
 class GRU_Matrix_Input(object):
     def __init__(self, X, word_dim, hidden_dim, U, W, b, bptt_truncate):
         self.hidden_dim = hidden_dim
