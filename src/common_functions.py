@@ -710,6 +710,134 @@ class Average_Pooling_Scan(object):
 
         self.params = [self.W]
 
+class GRU_Average_Pooling_Scan(object):
+    """The input is output of Conv: a tensor.  The output here should also be tensor"""
+
+    def __init__(self, rng, input_D, input_r, kern, left_D, right_D, dim, doc_len, topk): # length_l, length_r: valid lengths after conv
+#     layer1_DQ=Average_Pooling(rng, input_l=layer0_D_output, input_r=layer0_Q_output, kern=nkerns[0],
+#                                       left_D=left_D, right_D=right_D,
+#                      left_l=left_D_s, right_l=right_D_s, left_r=left_Q, right_r=right_Q, 
+#                       length_l=len_D_s+filter_words[1]-1, length_r=len_Q+filter_words[1]-1,
+#                        dim=maxSentLength+filter_words[1]-1, doc_len=maxDocLength, topk=3)
+
+
+#         fan_in = kern #kern numbers
+#         # each unit in the lower layer receives a gradient from:
+#         # "num output feature maps * filter height * filter width" /
+#         #   pooling size
+#         fan_out = kern
+#         # initialize weights with random weights
+#         W_bound = numpy.sqrt(6. / (fan_in + fan_out))
+#         self.W = theano.shared(numpy.asarray(
+#             rng.uniform(low=-W_bound, high=W_bound, size=(kern, kern)),
+#             dtype=theano.config.floatX),
+#                                borrow=True) #a weight matrix kern*kern
+        
+#         input_tensor_l=T.dtensor4("input_tensor_l")
+#         input_tensor_r=T.dtensor4("input_tensor_r")
+#         kern_scan=T.lscalar("kern_scan")
+#         length_D_s_scan=T.lvector("length_D_s_scan")
+#         left_D_s_scan=T.lvector("left_D_s_scan")
+#         right_D_s_scan=T.lvector("right_D_s_scan")
+#         length_r_scan=T.lscalar("length_r_scan")
+#         left_r_scan=T.lscalar("left_r_scan")
+#         right_r_scan=T.lscalar("right_r_scan")
+#         dim_scan=T.lscalar("dim_scan")
+#         topk_scan=T.lscalar("topk_scan")
+        
+
+        
+#         def sub_operation(input_l, length_l, left_l, right_l, input_r, kernn , length_r, left_r, right_r, dim, topk):
+#             input_l_matrix=debug_print(input_l.reshape((input_l.shape[1], input_l.shape[2])), 'origin_input_l_matrix')#input_l should be order3 tensor now
+#             input_l_matrix=debug_print(input_l_matrix[:, left_l:(input_l_matrix.shape[1]-right_l)],'input_l_matrix')
+# #             input_r_matrix=debug_print(input_r.reshape((input_r.shape[2], input_r.shape[3])),'origin_input_r_matrix')#input_r should be order4 tensor still
+# #             input_r_matrix=debug_print(input_r_matrix[:, left_r:(input_r_matrix.shape[1]-right_r)],'input_r_matrix')
+# #              
+# #              
+# #             simi_tensor=compute_simi_feature_batch1_new(input_l_matrix, input_r_matrix, length_l, length_r, self.W, dim) #(input.shape[0]/2, input.shape[1], input.shape[3], input.shape[3])
+# #             simi_question=debug_print(T.max(simi_tensor, axis=1).reshape((1, length_l)),'simi_question')
+# #              
+# #             neighborsArgSorted = T.argsort(simi_question, axis=1)
+# #             kNeighborsArg = neighborsArgSorted[:,-topk:]#only average the top 3 vectors
+# #             kNeighborsArgSorted = T.sort(kNeighborsArg, axis=1) # make y indices in acending lie
+# #             jj = kNeighborsArgSorted.flatten()
+# #             sub_matrix=input_l_matrix.transpose(1,0)[jj].reshape((topk, input_l_matrix.shape[0]))
+# #             sub_weights=simi_question.transpose(1,0)[jj].reshape((topk, 1))
+# #               
+# #             sub_weights =sub_weights/T.sum(sub_weights) #L-1 normalize attentions
+# #             sub_weights=T.repeat(sub_weights, kernn, axis=1)
+# #             dot_l=debug_print(T.sum(sub_matrix*sub_weights, axis=0), 'dot_l') # is a column now     
+# #             dot_l=T.max(sub_matrix, axis=0)   
+#             dot_l=debug_print(T.max(input_l_matrix, axis=1), 'dot_l') # max pooling
+#             return dot_l
+# 
+#      
+#         
+# #         results, updates = theano.scan(fn=sub_operation,
+# #                                        outputs_info=None,
+# #                                        sequences=[input_tensor_l, length_D_s_scan, left_D_s_scan, right_D_s_scan],
+# #                                        non_sequences=[input_tensor_r, kern_scan, length_r_scan, left_r_scan, right_r_scan, dim_scan, topk_scan])
+# 
+#         results, updates = theano.scan(fn=sub_operation,
+#                                        outputs_info=None,
+#                                        sequences=[input_D[left_D:doc_len-right_D], length_D_s[left_D: doc_len-right_D], left_D_s[left_D: doc_len-right_D], right_D_s[left_D: doc_len-right_D]],
+#                                        non_sequences=[input_r, kern, length_r, left_r, right_r, dim, topk])
+        
+#         scan_function = theano.function(inputs=[input_tensor_l, input_tensor_r, kern_scan, length_D_s_scan, left_D_s_scan, right_D_s_scan, length_r_scan, left_r_scan, right_r_scan, dim_scan, topk_scan], 
+#                                         outputs=results,
+#                                         updates=updates)
+# 
+# 
+#       
+#         sents=scan_function(input_D[left_D:doc_len-right_D], input_r, kern, 
+#                             length_D_s[left_D: doc_len-right_D], left_D_s[left_D: doc_len-right_D], right_D_s[left_D: doc_len-right_D], 
+#                             length_r, 
+#                             left_r, 
+#                             right_r, 
+#                             dim, 
+#                             topk)
+#         sents=results
+#         input_r_matrix=debug_print(input_r.reshape((input_r.shape[2], input_r.shape[3])),'origin_input_r_matrix')
+#         input_r_matrix=debug_print(input_r_matrix[:, left_r:(input_r_matrix.shape[1]-right_r)],'input_r_matrix')
+
+
+        valid_matrix=debug_print(input_D, 'valid_matrix')
+        left_padding = T.zeros((input_D.shape[0], left_D), dtype=theano.config.floatX)
+        right_padding = T.zeros((input_D.shape[0], right_D), dtype=theano.config.floatX)
+        matrix_padded = T.concatenate([left_padding, valid_matrix, right_padding], axis=1)         
+        self.output_D=matrix_padded   #it shows the second conv for doc has input of all sentences
+        self.output_D_valid_part=valid_matrix
+        self.output_QA_sent_level_rep=input_r
+        
+        #now, average pooling by comparing self.output_QA and self.output_D_valid_part, choose one key sentence
+        topk=1
+        simi_matrix=debug_print(compute_simi_feature_matrix_with_column(self.output_D_valid_part, self.output_QA_sent_level_rep, doc_len-left_D-right_D, 1, doc_len), 'simi_matrix_matrix_with_column') #(input.shape[0]/2, input.shape[1], input.shape[3], input.shape[3])
+        simi_question=debug_print(simi_matrix.reshape((1, doc_len-left_D-right_D)),'simi_question')
+        
+        neighborsArgSorted = T.argsort(simi_question, axis=1)
+        kNeighborsArg = neighborsArgSorted[:,-topk:]#only average the top 3 vectors
+        kNeighborsArgSorted = T.sort(kNeighborsArg, axis=1) # make y indices in acending lie
+        jj = kNeighborsArgSorted.flatten()
+        sub_matrix=self.output_D_valid_part.transpose(1,0)[jj].reshape((topk, self.output_D_valid_part.shape[0]))
+        sub_weights=simi_question.transpose(1,0)[jj].reshape((topk, 1))
+        
+        sub_weights =sub_weights/T.sum(sub_weights) #L-1 normalize attentions
+        #weights_answer=simi_answer/T.sum(simi_answer)    
+        #concate=T.concatenate([weights_question, weights_answer], axis=1)
+        #reshaped_concate=concate.reshape((input.shape[0], 1, 1, length_last_dim))
+        
+        sub_weights=T.repeat(sub_weights, kern, axis=1)
+        #weights_answer_matrix=T.repeat(weights_answer, kern, axis=0)
+        
+        #with attention
+#         output_D_sent_level_rep=debug_print(T.sum(sub_matrix*sub_weights, axis=0), 'output_D_sent_level_rep') # is a column now    
+        output_D_sent_level_rep=debug_print(T.max(sub_matrix, axis=0), 'output_D_sent_level_rep') # is a column now    
+        self.output_D_sent_level_rep=output_D_sent_level_rep    
+        
+        
+
+#         self.params = [self.W]
+
 def drop(input, p, rng): 
     """
     :type input: numpy.array
