@@ -39,15 +39,11 @@ from scipy import linalg, mat, dot
 6) shuffle training data
 7) attention used cosine
 8) reduce kern, emb size for overfitting
-
-
-
 Doesnt work:
 3) margin=0.5
 4) euclidean distance
 4) glove initialization
 2) unknown words have different random vectors
-
 '''
 
 def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[50,50], batch_size=1, window_width=3,
@@ -189,27 +185,27 @@ def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[50,50], batch_siz
     layer0_A3_output=debug_print(layer0_A3.output_vector_last, 'layer0_A3.output')
     layer0_A4_output=debug_print(layer0_A4.output_vector_last, 'layer0_A4.output')
     
-#     #before reasoning, do a GRU for doc: d
-#     U_d, W_d, b_d=create_GRU_para(rng, nkerns[0], nkerns[0])
-#     layer_d_para=[U_d, W_d, b_d]
-#     layer_D_GRU = GRU_Matrix_Input(X=layer0_D_output, word_dim=nkerns[0], hidden_dim=nkerns[0],U=U_d,W=W_d,b=b_d,bptt_truncate=-1)
+    #before reasoning, do a GRU for doc: d
+    U_d, W_d, b_d, U_db, W_db, b_db=create_Bi_GRU_para(rng, nkerns[0]*2, nkerns[0]*2)
+    layer_d_para=[U_d, W_d, b_d, U_db, W_db, b_db]
+    layer_D_GRU = Bi_GRU_Matrix_Input(X=layer0_D_output, word_dim=nkerns[0]*2, hidden_dim=nkerns[0]*2,U=U_d,W=W_d,b=b_d,U_b=U_db,W_b=W_db,b_b=b_db, bptt_truncate=-1)
     
     #Reasoning Layer 1
-    repeat_Q=debug_print(T.repeat(layer0_Q_output.reshape((layer0_Q_output.shape[0],1)), maxDocLength, axis=1)[:,:layer0_D_output.shape[1]], 'repeat_Q')
-    input_DNN=debug_print(T.concatenate([layer0_D_output,repeat_Q], axis=0).transpose(), 'input_DNN')#each row is an example
-    output_DNN1=HiddenLayer(rng, input=input_DNN, n_in=nkerns[0]*6, n_out=nkerns[0])
+    repeat_Q=debug_print(T.repeat(layer0_Q_output.reshape((layer0_Q_output.shape[0],1)), maxDocLength, axis=1)[:,:layer_D_GRU.output_matrix.shape[1]], 'repeat_Q')
+    input_DNN=debug_print(T.concatenate([layer_D_GRU.output_matrix,repeat_Q], axis=0).transpose(), 'input_DNN')#each row is an example
+    output_DNN1=HiddenLayer(rng, input=input_DNN, n_in=nkerns[0]*8, n_out=nkerns[0])
      
     attention_W=create_ensemble_para(rng, nkerns[0], 1)
     attention_weights=T.nnet.softmax(T.dot(attention_W,output_DNN1.output.transpose()))
-    repeat_attentions=T.repeat(attention_weights, layer0_D_output.shape[0], axis=0)
-    doc_r=T.sum(layer0_D_output*repeat_attentions, axis=1)
+    repeat_attentions=T.repeat(attention_weights, layer_D_GRU.output_matrix.shape[0], axis=0)
+    doc_r=T.sum(layer_D_GRU.output_matrix*repeat_attentions, axis=1)
 
     combine_DQ=T.concatenate([doc_r, layer0_Q_output], axis=0) # dim: hidden*6
     
     
     
     
-    output_DNN2=HiddenLayer(rng, input=combine_DQ, n_in=nkerns[0]*6, n_out=nkerns[0])
+    output_DNN2=HiddenLayer(rng, input=combine_DQ, n_in=nkerns[0]*8, n_out=nkerns[0]*4)
     
 #     DNN_out=debug_print(output_DNN2.output.transpose(), 'DNN_out')
 #     U_p, W_p, b_p=create_GRU_para(rng, nkerns[0], nkerns[0])
@@ -240,12 +236,12 @@ def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[50,50], batch_siz
     QA3=T.concatenate([translated_Q2, layer0_A3_output], axis=0)
     QA4=T.concatenate([translated_Q2, layer0_A4_output], axis=0)
     
-    W_HL,b_HL=create_HiddenLayer_para(rng, n_in=nkerns[0]*5, n_out=1)
+    W_HL,b_HL=create_HiddenLayer_para(rng, n_in=nkerns[0]*8, n_out=1)
     match_params=[W_HL,b_HL]
-    QA1_match=HiddenLayer(rng, input=QA1, n_in=nkerns[0]*5, n_out=1, W=W_HL, b=b_HL)
-    QA2_match=HiddenLayer(rng, input=QA2, n_in=nkerns[0]*5, n_out=1, W=W_HL, b=b_HL)
-    QA3_match=HiddenLayer(rng, input=QA3, n_in=nkerns[0]*5, n_out=1, W=W_HL, b=b_HL)
-    QA4_match=HiddenLayer(rng, input=QA4, n_in=nkerns[0]*5, n_out=1, W=W_HL, b=b_HL)
+    QA1_match=HiddenLayer(rng, input=QA1, n_in=nkerns[0]*8, n_out=1, W=W_HL, b=b_HL)
+    QA2_match=HiddenLayer(rng, input=QA2, n_in=nkerns[0]*8, n_out=1, W=W_HL, b=b_HL)
+    QA3_match=HiddenLayer(rng, input=QA3, n_in=nkerns[0]*8, n_out=1, W=W_HL, b=b_HL)
+    QA4_match=HiddenLayer(rng, input=QA4, n_in=nkerns[0]*8, n_out=1, W=W_HL, b=b_HL)
     
     
     
@@ -279,6 +275,8 @@ def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[50,50], batch_siz
                         +(Ub**2).sum()+(Wb**2).sum()
                         +(output_DNN1.W**2).sum()
                         +(output_DNN2.W**2).sum()
+                        +(U_d**2).sum()+(W_d**2).sum()
+                        +(U_db**2).sum()+(W_db**2).sum()
                         +(W_HL**2).sum()
                         +(attention_W**2).sum()
                         , 'L2_reg')#+(embeddings**2).sum(), 'L2_reg')#+(layer1.W** 2).sum()++(embeddings**2).sum()
@@ -324,7 +322,7 @@ def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[50,50], batch_siz
             }, on_unused_input='ignore')
 
 
-    params = layer0_para+output_DNN1.params+output_DNN2.params+match_params+[attention_W]
+    params = layer0_para+output_DNN1.params+output_DNN2.params+match_params+layer_d_para+[attention_W]
     
     
 #     accumulator=[]
