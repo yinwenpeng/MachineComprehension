@@ -407,6 +407,40 @@ def remove_noise_sents_DPN(infile):
     readfile.close()
     print 'over'
 
+def change_DPNQ_into_DPNQQClass():
+    files=['mc500.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_DPNQ.txt',
+           'mc500.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_DPNQ.txt',
+           'mc500.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_DPNQ.txt',
+           'mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_DPNQ.txt',
+           'mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_DPNQ.txt',
+           'mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt_DPNQ.txt']
+    
+    class2index={'how':0,'how much':1, 'how many':2, 'what':3,'who':4,'where':5,'which':6,'when':7,'whose':8,'why':9,'will':10} # totally 12 classes, including "other"
+    
+
+    for file in files:
+        readfile=open(path+file, 'r')
+        writefile=open(path+file+'__DPNQQClass.txt', 'w')
+        for line in readfile:
+            writefile.write(line.strip().lower())
+            Q=line.strip().split('\t')[-1].lower()
+            ind_set=[]
+            for cls,index in class2index.iteritems():
+                posi=Q.find(cls)
+                if posi>=0:
+                    ind_set.append(index)
+            if len(ind_set)==0: # didnt find any indicator, then class is 'other':11
+                ind_set.append(11)
+            #remove some thing
+            if len(ind_set)>=2:
+                if 0 in ind_set and (1 in ind_set or 2 in ind_set):
+                    ind_set.remove(0)
+            writefile.write('\t'+str(ind_set[0])+'\n')
+        readfile.close()
+        writefile.close()
+        print 'over'
+        
+
 if __name__ == '__main__':
 #     standardlize('mc500.train.ans', 'mc500.train.tsv')
 #     standardlize('mc500.dev.ans', 'mc500.dev.tsv')
@@ -417,7 +451,7 @@ if __name__ == '__main__':
 #     length_sent_text()
 #     Extract_Vocab()
 #     transcate_word2vec()
-    transcate_glove()
+#     transcate_glove()
 #     change_DQA_into_DQAAAA()
 
 #     combine_standardlize_statement('mc500.train.tsv_standardlized.txt', 'Statements/mc500.train.statements.tsv')
@@ -446,4 +480,6 @@ if __name__ == '__main__':
 #     remove_noise_sents_DPN('mc160.train.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt')
 #     remove_noise_sents_DPN('mc160.dev.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt')
 #     remove_noise_sents_DPN('mc160.test.tsv_standardlized.txt_with_state.txt_DSSSS.txt_DPN.txt')
+
+    change_DPNQ_into_DPNQQClass()
         
