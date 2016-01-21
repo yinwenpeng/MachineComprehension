@@ -47,9 +47,9 @@ Doesnt work:
 2) unknown words have different random vectors
 '''
 
-def evaluate_lenet5(learning_rate=0.01, n_epochs=2000, nkerns=[50,50], batch_size=1, window_width=2,
+def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[90,90], batch_size=1, window_width=2,
                     maxSentLength=64, maxDocLength=60, emb_size=50, hidden_size=200,
-                    L2_weight=0.0065, update_freq=1, norm_threshold=5.0, max_s_length=57, max_d_length=59, margin=0.5):
+                    L2_weight=0.0065, update_freq=1, norm_threshold=5.0, max_s_length=57, max_d_length=59, margin=1.0):
     maxSentLength=max_s_length+2*(window_width-1)
     maxDocLength=max_d_length+2*(window_width-1)
     model_options = locals().copy()
