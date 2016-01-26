@@ -49,9 +49,9 @@ Doesnt work:
 
 '''
 #0.406666666667 (at 11 )
-def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[50,50], batch_size=1, window_width=2,
+def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[90,90], batch_size=1, window_width=2,
                     maxSentLength=64, maxDocLength=60, emb_size=50, hidden_size=200,
-                    L2_weight=0.00065, update_freq=1, norm_threshold=5.0, max_s_length=57, max_d_length=59, margin=0.3):
+                    L2_weight=0.0065, update_freq=1, norm_threshold=5.0, max_s_length=57, max_d_length=59, margin=0.2):
     maxSentLength=max_s_length+2*(window_width-1)
     maxDocLength=max_d_length+2*(window_width-1)
     model_options = locals().copy()
@@ -339,14 +339,14 @@ def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[50,50], batch_siz
     simi_overall_level3=debug_print(cosine(overall_D_A3, overall_A3), 'simi_overall_level3')
     simi_overall_level4=debug_print(cosine(overall_D_A4, overall_A4), 'simi_overall_level4')
 
-#     simi_1=simi_overall_level1+simi_sent_level1+simi_doc_level1
-#     simi_2=simi_overall_level2+simi_sent_level2+simi_doc_level2
-#     simi_3=simi_overall_level3+simi_sent_level3+simi_doc_level3
-#     simi_4=simi_overall_level4+simi_sent_level4+simi_doc_level4 
-    simi_1=(simi_overall_level1+simi_sent_level1+simi_doc_level1)/3.0
-    simi_2=(simi_overall_level2+simi_sent_level2+simi_doc_level2)/3.0
-    simi_3=(simi_overall_level3+simi_sent_level3+simi_doc_level3)/3.0
-    simi_4=(simi_overall_level4+simi_sent_level4+simi_doc_level4)/3.0 
+    simi_1=simi_overall_level1#+simi_sent_level1+simi_doc_level1
+    simi_2=simi_overall_level2#+simi_sent_level2+simi_doc_level2
+    simi_3=simi_overall_level3#+simi_sent_level3+simi_doc_level3
+    simi_4=simi_overall_level4#+simi_sent_level4+simi_doc_level4 
+#     simi_1=(simi_overall_level1+simi_sent_level1+simi_doc_level1)/3.0
+#     simi_2=(simi_overall_level2+simi_sent_level2+simi_doc_level2)/3.0
+#     simi_3=(simi_overall_level3+simi_sent_level3+simi_doc_level3)/3.0
+#     simi_4=(simi_overall_level4+simi_sent_level4+simi_doc_level4)/3.0 
     
 
 
@@ -358,9 +358,13 @@ def evaluate_lenet5(learning_rate=0.05, n_epochs=2000, nkerns=[50,50], batch_siz
 #     nega_simi=T.max([simi_overall_level2, simi_overall_level3, simi_overall_level4])
     #use ensembled simi
 #     cost=T.maximum(0.0, margin+T.max([simi_2, simi_3, simi_4])-simi_1) # ranking loss: max(0, margin-nega+posi)
-    cost=(T.maximum(0.0, margin+simi_2-simi_1)+T.maximum(0.0, margin+simi_3-simi_1)+T.maximum(0.0, margin+simi_4-simi_1))/3.0
-    posi_simi=simi_1
-    nega_simi=T.max([simi_2, simi_3, simi_4])
+#     cost=T.maximum(0.0, margin+simi_2-simi_1)+T.maximum(0.0, margin+simi_3-simi_1)+T.maximum(0.0, margin+simi_4-simi_1)
+    cost12=T.maximum(0.0, margin+simi_sent_level2-simi_sent_level1)+T.maximum(0.0, margin+simi_doc_level2-simi_doc_level1)+T.maximum(0.0, margin+simi_overall_level2-simi_overall_level1)
+    cost13=T.maximum(0.0, margin+simi_sent_level3-simi_sent_level1)+T.maximum(0.0, margin+simi_doc_level3-simi_doc_level1)+T.maximum(0.0, margin+simi_overall_level3-simi_overall_level1)
+    cost14=T.maximum(0.0, margin+simi_sent_level4-simi_sent_level1)+T.maximum(0.0, margin+simi_doc_level4-simi_doc_level1)+T.maximum(0.0, margin+simi_overall_level4-simi_overall_level1)
+    cost=cost12+cost13+cost14
+    posi_simi=T.max([simi_sent_level1, simi_doc_level1, simi_overall_level1])
+    nega_simi=T.max([simi_sent_level2, simi_doc_level2, simi_overall_level2, simi_sent_level3, simi_doc_level3, simi_overall_level3,simi_sent_level4, simi_doc_level4, simi_overall_level4])
 
 
     
